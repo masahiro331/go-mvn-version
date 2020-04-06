@@ -11,7 +11,7 @@ import (
 
 var (
 	Qualifiers = []string{"alpha", "beta", "milestone", "rc", "snapshot", "", "sp"}
-	Aliases    = map[string]string{"ga": "", "final": "", "release": "", "cr": "rc", "0": ""}
+	Aliases    = map[string]string{"ga": "", "final": "", "release": "", "cr": "rc"}
 )
 
 type Version string
@@ -45,7 +45,7 @@ func (v1 Version) Compare(v2 Version) int {
 		log.Fatal("padding error")
 	}
 	for i := range parsedV1 {
-		parsedV1[i], parsedV2[i] = paddingArray(parsedV1[i], parsedV2[i])
+		parsedV1[i], parsedV2[i] = paddingArray(parsedV1[i], parsedV2[i], "")
 	}
 
 	// Compare
@@ -63,15 +63,15 @@ func (v1 Version) Compare(v2 Version) int {
 	return 0
 }
 
-func paddingArray(a1, a2 []string) ([]string, []string) {
+func paddingArray(a1, a2 []string, paddingStr string) ([]string, []string) {
 	stackDiv := len(a1) - len(a2)
 	if stackDiv > 0 {
 		for i := 0; i < stackDiv; i++ {
-			a2 = append(a2, "")
+			a2 = append(a2, paddingStr)
 		}
 	} else if stackDiv < 0 {
 		for i := 0; i < int(math.Abs(float64(stackDiv))); i++ {
-			a1 = append(a1, "")
+			a1 = append(a1, paddingStr)
 		}
 	}
 
@@ -192,6 +192,7 @@ func compare(c1, c2 string) int {
 	// Qualifiers compare
 	// Qualifiers = []string{"alpha", "beta", "milestone", "rc", "snapshot", "", "sp"}
 	// "alpha" < "beta" < "milestone" < "rc" < "snapshot" < "" < "sp" < "[ASCII]" < [Integer]}
+	// "1.foo" < "1-foo" < "1-1" < "1.1"
 	q1 := includeWithArray(Qualifiers, c1)
 	q2 := includeWithArray(Qualifiers, c2)
 	if q1 > q2 {
