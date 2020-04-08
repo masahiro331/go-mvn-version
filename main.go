@@ -50,55 +50,53 @@ func NewVersion(v string) (*Version, error) {
 }
 
 func (v *Version) String() string {
-	result := ""
-	for _, item := range v.Items {
-		switch item.getType() {
-		case StringType:
-			result = fmt.Sprintf("%s.%s", result, item.(StringItem))
-		case IntType:
-			result = fmt.Sprintf("%s.%d", result, item.(IntItem))
-		case ListType:
-			list := ""
-			for _, i := range item.(ListItem) {
-				switch i.getType() {
-				case StringType:
-					list = fmt.Sprintf("%s.%s", list, i.(StringItem))
-				case IntType:
-					list = fmt.Sprintf("%s.%d", list, i.(IntItem))
-				}
-			}
-			result = fmt.Sprintf("%s-%s", result, list[1:])
-		}
-	}
-	return result[1:]
+	return v.value
 }
 
+func (v *Version) hasListItem() bool {
+	for _, item := range v.Items {
+		if item.getType() == ListType {
+			return true
+		}
+	}
+	return false
+}
 func (v1 *Version) Compare(v2 Version) int {
 	// Padding
-	if div := len(v1.Items) - len(v2.Items); div != 0 {
+	ListPaddingFlag := (v1.hasListItem() || v2.hasListItem())
+
+	v1Items := v1.Items
+	v2Items := v2.Items
+	if div := len(v1Items) - len(v2Items); div != 0 {
 		if div > 0 {
 			for i := 0; i < div; i++ {
-				v2.Items = append(v2.Items, ListItem{StringItem("")})
+				if ListPaddingFlag {
+					v2Items = append(v2Items, ListItem{StringItem("")})
+				} else {
+					v2Items = append(v2Items, IntItem(0))
+				}
 			}
 		}
 		if div < 0 {
 			for i := div; i < 0; i++ {
-				v1.Items = append(v1.Items, ListItem{StringItem("")})
+				if ListPaddingFlag {
+					v1Items = append(v1Items, ListItem{StringItem("")})
+				} else {
+					v1Items = append(v1Items, IntItem(0))
+				}
 			}
 		}
 	}
-	if len(v1.Items) != len(v2.Items) {
+
+	if len(v1Items) != len(v2Items) {
 		panic("version padding error")
 	}
 
-	fmt.Println(v1.Items)
-	fmt.Println(v2.Items)
-
-	for i, item := range v1.Items {
-		if item.isNull() && v2.Items[i].isNull() {
+	for i, item := range v1Items {
+		if item.isNull() && v2Items[i].isNull() {
 			continue
 		}
-		result := item.Compare(v2.Items[i])
+		result := item.Compare(v2Items[i])
 		if result != 0 {
 			return result
 		}
@@ -138,6 +136,9 @@ type StringItem string
 func (item1 StringItem) Compare(item2 Item) int {
 	switch item2.getType() {
 	case IntType:
+		if item2.isNull() {
+			return 1
+		}
 		return -1
 	case StringType:
 		q1 := item1.includeWithArray(Qualifiers)
@@ -198,6 +199,9 @@ func (item1 IntItem) Compare(item2 Item) int {
 			return 0
 		}
 	case StringType:
+		if item1.isNull() && !item2.(StringItem).isNull() {
+			return -1
+		}
 		return 1
 	case ListType:
 		return 1
@@ -271,17 +275,17 @@ func (items ListItem) isNull() bool {
 }
 
 func main() {
-	v1, err := NewVersion("2.0.a")
+	v1, err := NewVersion("11.a")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	v2, err := NewVersion("2.0")
+	v2, err := NewVersion("11")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("greater than : %t", v1.GreaterThan(*v2))
+	fmt.Println(v2.LessThan(*v1))
 }
 
 func stringItem(item string) StringItem {

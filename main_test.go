@@ -353,10 +353,10 @@ func TestVersionQualifier(t *testing.T) {
 			if err != nil {
 				t.Errorf("parse error")
 			}
-			if low.Compare(*high) > 0 {
+			if !low.LessThan(*high) {
 				t.Errorf("expected: %s < %s \n", low, high)
 			}
-			if high.Compare(*low) < 0 {
+			if !high.GreaterThan(*low) {
 				t.Errorf("expected: %s > %s \n", high, low)
 			}
 		}
@@ -376,10 +376,10 @@ func TestVersionsNumber(t *testing.T) {
 			if err != nil {
 				t.Errorf("parse error")
 			}
-			if low.Compare(*high) > 0 {
-				t.Errorf("expected: %s < %s \n", low, high)
+			if !low.LessThan(*high) {
+				t.Errorf("expected: %s < %s \n", low.value, high.value)
 			}
-			if high.Compare(*low) < 0 {
+			if !high.GreaterThan(*low) {
 				t.Errorf("expected: %s > %s \n", high, low)
 			}
 		}
