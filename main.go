@@ -91,6 +91,9 @@ func (v1 *Version) Compare(v2 Version) int {
 		panic("version padding error")
 	}
 
+	fmt.Println(v1.Items)
+	fmt.Println(v2.Items)
+
 	for i, item := range v1.Items {
 		if item.isNull() && v2.Items[i].isNull() {
 			continue
@@ -268,18 +271,17 @@ func (items ListItem) isNull() bool {
 }
 
 func main() {
-	// v1, err := NewVersion("2.0.a")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	v2, err := NewVersion("2--")
+	v1, err := NewVersion("2.0.a")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf(v2.value)
 
-	// fmt.Printf("greater than : %t", v1.GreaterThan(*v2))
+	v2, err := NewVersion("2.0")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("greater than : %t", v1.GreaterThan(*v2))
 }
 
 func stringItem(item string) StringItem {
@@ -330,8 +332,6 @@ func parseVersion(v string) ([]Item, error) {
 			startIndex = i + 1
 
 			stack = append(stack, list)
-			fmt.Println(startIndex)
-			fmt.Println(stack)
 			list = ListItem{}
 
 		} else if _, err := strconv.Atoi(c); err == nil {
@@ -372,7 +372,6 @@ func parseVersion(v string) ([]Item, error) {
 
 		stack = append(stack, list)
 	}
-	fmt.Println(stack)
 
 	ret := []Item{}
 	for _, item := range stack[0].(ListItem) {
