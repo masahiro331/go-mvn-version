@@ -3,150 +3,361 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
-	"os"
 	"strconv"
 	"strings"
 )
 
 var (
-	Qualifiers = []string{"alpha", "beta", "milestone", "rc", "snapshot", "", "sp"}
+	Qualifiers = []StringItem{"alpha", "beta", "milestone", "rc", "snapshot", "", "sp"}
 	Aliases    = map[string]string{"ga": "", "final": "", "release": "", "cr": "rc"}
 )
 
-type Version string
+type ItemType int
 
-func (v Version) String() string {
-	lstr := []string{}
-	for _, list := range v.parseVersion() {
-		if len(list) > 0 {
-			lstr = append(lstr, strings.Join(list, "."))
-		}
+func (t ItemType) String() string {
+	switch t {
+	case StringType:
+		return "string type"
+	case IntType:
+		return "int type"
+	case ListType:
+		return "list type"
 	}
-	return strings.Join(lstr, "-")
+	return ""
 }
 
-func (v1 Version) Compare(v2 Version) int {
-	parsedV1 := v1.parseVersion()
-	parsedV2 := v2.parseVersion()
+const (
+	StringType ItemType = iota
+	IntType
+	ListType
+)
 
-	// Padding
-	stackDiv := len(parsedV1) - len(parsedV2)
-	if stackDiv > 0 {
-		for i := 0; i < stackDiv; i++ {
-			parsedV2 = append(parsedV2, []string{})
-		}
-	} else if stackDiv < 0 {
-		for i := 0; i < int(math.Abs(float64(stackDiv))); i++ {
-			parsedV1 = append(parsedV1, []string{})
-		}
-	}
-	if len(parsedV1) != len(parsedV2) {
-		log.Fatal("padding error")
-	}
-	for i := range parsedV1 {
-		parsedV1[i], parsedV2[i] = paddingArray(parsedV1[i], parsedV2[i], "")
+type Version struct {
+	value string
+	Items []Item
+}
+
+func NewVersion(v string) (*Version, error) {
+	parsedVer, err := parseVersion(v)
+	if err != nil {
+		return nil, err
 	}
 
-	// Compare
-	for i := range parsedV1 {
-		if len(parsedV1[i]) != len(parsedV2[i]) {
-			log.Fatal("padding item error")
-		}
-		for j := range parsedV1[i] {
-			if result := compare(parsedV1[i][j], parsedV2[i][j]); result != 0 {
-				return result
+	return &Version{
+		value: v,
+		Items: parsedVer,
+	}, nil
+}
+
+func (v *Version) String() string {
+	result := ""
+	for _, item := range v.Items {
+		switch item.getType() {
+		case StringType:
+			result = fmt.Sprintf("%s.%s", result, item.(StringItem))
+		case IntType:
+			result = fmt.Sprintf("%s.%d", result, item.(IntItem))
+		case ListType:
+			list := ""
+			for _, i := range item.(ListItem) {
+				switch i.getType() {
+				case StringType:
+					list = fmt.Sprintf("%s.%s", list, i.(StringItem))
+				case IntType:
+					list = fmt.Sprintf("%s.%d", list, i.(IntItem))
+				}
 			}
+			result = fmt.Sprintf("%s-%s", result, list[1:])
+		}
+	}
+	return result[1:]
+}
+
+func (v1 *Version) Compare(v2 Version) int {
+	// Padding
+	if div := len(v1.Items) - len(v2.Items); div != 0 {
+		if div > 0 {
+			for i := 0; i < div; i++ {
+				v2.Items = append(v2.Items, ListItem{StringItem("")})
+			}
+		}
+		if div < 0 {
+			for i := div; i < 0; i++ {
+				v1.Items = append(v1.Items, ListItem{StringItem("")})
+			}
+		}
+	}
+	if len(v1.Items) != len(v2.Items) {
+		panic("version padding error")
+	}
+
+	for i, item := range v1.Items {
+		if item.isNull() && v2.Items[i].isNull() {
+			continue
+		}
+		result := item.Compare(v2.Items[i])
+		if result != 0 {
+			return result
 		}
 	}
 
 	return 0
 }
 
-func paddingArray(a1, a2 []string, paddingStr string) ([]string, []string) {
-	stackDiv := len(a1) - len(a2)
-	if stackDiv > 0 {
-		for i := 0; i < stackDiv; i++ {
-			a2 = append(a2, paddingStr)
-		}
-	} else if stackDiv < 0 {
-		for i := 0; i < int(math.Abs(float64(stackDiv))); i++ {
-			a1 = append(a1, paddingStr)
-		}
-	}
-
-	return a1, a2
-}
-
-func (v1 Version) Equal(v2 Version) bool {
+func (v1 *Version) Equal(v2 Version) bool {
 	return v1.Compare(v2) == 0
 }
 
-func (v1 Version) GreaterThan(v2 Version) bool {
+func (v1 *Version) GreaterThan(v2 Version) bool {
 	return v1.Compare(v2) > 0
 }
 
-func (v1 Version) LessThan(v2 Version) bool {
+func (v1 *Version) LessThan(v2 Version) bool {
 	return v1.Compare(v2) < 0
 }
 
-func (v Version) parseVersion() [][]string {
-	var stack [][]string
-	var list []string
+type Item interface {
+	Compare(v2 Item) int
+	getType() ItemType
+	isNull() bool
+}
+
+func parseItem(item string) Item {
+	i, err := strconv.Atoi(item)
+	if err != nil {
+		return StringItem(item)
+	}
+	return IntItem(i)
+}
+
+type StringItem string
+
+func (item1 StringItem) Compare(item2 Item) int {
+	switch item2.getType() {
+	case IntType:
+		return -1
+	case StringType:
+		q1 := item1.includeWithArray(Qualifiers)
+		q2 := item2.(StringItem).includeWithArray(Qualifiers)
+		if q1 > q2 {
+			return 1
+		}
+		if q1 < q2 {
+			return -1
+		}
+
+		if item1 > item2.(StringItem) {
+			return 1
+		} else if item1 < item2.(StringItem) {
+			return -1
+		} else {
+			return 0
+		}
+	case ListType:
+		if len(item2.(ListItem)) == 0 {
+			return 1
+		}
+		return -1
+	}
+	return 0
+}
+
+func (item StringItem) getType() ItemType {
+	return StringType
+}
+
+func (item StringItem) isNull() bool {
+	if item == "" {
+		return true
+	}
+	return false
+}
+
+func (item StringItem) includeWithArray(sa []StringItem) int {
+	for i, q := range sa {
+		if q == item {
+			return i
+		}
+	}
+	return len(sa)
+}
+
+type IntItem int
+
+func (item1 IntItem) Compare(item2 Item) int {
+	switch item2.getType() {
+	case IntType:
+		if item1 > item2.(IntItem) {
+			return 1
+		} else if item1 < item2.(IntItem) {
+			return -1
+		} else {
+			return 0
+		}
+	case StringType:
+		return 1
+	case ListType:
+		return 1
+	}
+	return 0
+}
+
+func (item IntItem) getType() ItemType {
+	return IntType
+}
+
+func (item IntItem) isNull() bool {
+	if item == 0 {
+		return true
+	}
+	return false
+}
+
+type ListItem []Item
+
+func (item ListItem) getType() ItemType {
+	return ListType
+}
+
+func (listitem1 ListItem) Compare(item2 Item) int {
+	switch item2.getType() {
+	case IntType:
+		return -1
+	case StringType:
+		return 1
+	case ListType:
+		// Padding
+		listitem2 := item2.(ListItem)
+		if div := len(listitem1) - len(listitem2); div != 0 {
+			if div > 0 {
+				for i := 0; i < div; i++ {
+					listitem2 = append(listitem2, IntItem(1))
+				}
+			}
+			if div < 0 {
+				for i := div; i < 0; i++ {
+					listitem1 = append(listitem1, IntItem(1))
+				}
+			}
+		}
+		if len(listitem1) != len(listitem2) {
+			panic("listitem padding error")
+		}
+
+		for i, item := range listitem1 {
+			result := item.Compare(listitem2[i])
+			if result != 0 {
+				return result
+			}
+		}
+		return 0
+	}
+	return 0
+}
+
+func (items ListItem) isNull() bool {
+	if len(items) == 0 {
+		return true
+	}
+	for _, item := range items {
+		if !item.isNull() {
+			return false
+		}
+	}
+	return true
+}
+
+func main() {
+	// v1, err := NewVersion("2.0.a")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	v2, err := NewVersion("2--")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf(v2.value)
+
+	// fmt.Printf("greater than : %t", v1.GreaterThan(*v2))
+}
+
+func stringItem(item string) StringItem {
+	switch item {
+	case "a":
+		return StringItem("alpha")
+	case "b":
+		return StringItem("beta")
+	case "m":
+		return StringItem("milestone")
+	}
+
+	return StringItem(item)
+}
+
+func parseVersion(v string) ([]Item, error) {
+	var stack []Item
+	var list ListItem
 
 	isDigit := false
 	startIndex := 0
-	str := strings.ToLower(string(v))
+	str := strings.ToLower(v)
 	sa := strings.Split(str, "")
 	for i, c := range sa {
 		if c == "." {
 			if i != startIndex {
 				s, ok := Aliases[str[startIndex:i]]
 				if ok || s != "" {
-					list = append(list, s)
+					list = append(list, parseItem(s))
 				} else {
-					list = append(list, str[startIndex:i])
+					list = append(list, parseItem(str[startIndex:i]))
 				}
 			} else {
-				list = append(list, "0")
+				list = append(list, IntItem(0))
 			}
 			startIndex = i + 1
 		} else if c == "-" {
 			if i != startIndex {
 				s, ok := Aliases[str[startIndex:i]]
 				if ok || s != "" {
-					list = append(list, s)
+					list = append(list, parseItem(s))
 				} else {
-					list = append(list, str[startIndex:i])
+					list = append(list, parseItem(str[startIndex:i]))
 				}
 			} else {
-				list = append(list, "0")
+				list = append(list, IntItem(0))
 			}
 			startIndex = i + 1
-			stack = append(stack, trimNullValue(list))
-			list = []string{}
+
+			stack = append(stack, list)
+			fmt.Println(startIndex)
+			fmt.Println(stack)
+			list = ListItem{}
 
 		} else if _, err := strconv.Atoi(c); err == nil {
 			if !isDigit && i > startIndex {
 				// list = append(list, str[startIndex:i])
-				list = append(list, stringItem(str[startIndex:i]))
-
+				s, ok := Aliases[str[startIndex:i]]
+				if ok || s != "" {
+					list = append(list, stringItem(s))
+				} else {
+					list = append(list, stringItem(str[startIndex:i]))
+				}
 				startIndex = i
 
-				stack = append(stack, trimNullValue(list))
-				list = []string{}
+				stack = append(stack, list)
+				list = ListItem{}
 			}
 
 			isDigit = true
 		} else {
 			if isDigit && i > startIndex {
 				// list = append(list, parseItem(str[startIndex:i]))
-				list = append(list, str[startIndex:i])
-
+				list = append(list, parseItem(str[startIndex:i]))
 				startIndex = i
 
-				stack = append(stack, trimNullValue(list))
-				list = []string{}
+				stack = append(stack, list)
+				list = ListItem{}
 			}
 			isDigit = false
 		}
@@ -154,127 +365,32 @@ func (v Version) parseVersion() [][]string {
 	if len(v) > startIndex {
 		s, ok := Aliases[str[startIndex:]]
 		if ok || s != "" {
-			list = append(list, s)
+			list = append(list, parseItem(s))
 		} else {
-			list = append(list, str[startIndex:])
+			list = append(list, parseItem(str[startIndex:]))
 		}
 
-		stack = append(stack, trimNullValue(list))
+		stack = append(stack, list)
 	}
+	fmt.Println(stack)
 
-	return stack
+	ret := []Item{}
+	for _, item := range stack[0].(ListItem) {
+		ret = append(ret, item)
+	}
+	ret = trimNullSuffix(ret)
+
+	return append(ret, stack[1:]...), nil
 }
 
-func stringItem(item string) string {
-	switch item {
-	case "a":
-		return "alpha"
-	case "b":
-		return "beta"
-	case "m":
-		return "milestone"
-	}
-
-	return item
-}
-
-func compare(c1, c2 string) int {
-	//  Aliases transfer
-	_, ok := Aliases[c1]
-	if ok {
-		c1 = Aliases[c1]
-	}
-	_, ok = Aliases[c2]
-	if ok {
-		c2 = Aliases[c2]
-	}
-
-	// Qualifiers compare
-	// Qualifiers = []string{"alpha", "beta", "milestone", "rc", "snapshot", "", "sp"}
-	// "alpha" < "beta" < "milestone" < "rc" < "snapshot" < "" < "sp" < "[ASCII]" < [Integer]}
-	// "1.foo" < "1-foo" < "1-1" < "1.1"
-	q1 := includeWithArray(Qualifiers, c1)
-	q2 := includeWithArray(Qualifiers, c2)
-	if q1 > q2 {
-		return 1
-	}
-	if q1 < q2 {
-		return -1
-	}
-
-	iFlag1 := false
-	i1, err := strconv.Atoi(c1)
-	if err == nil {
-		iFlag1 = true
-	}
-
-	iFlag2 := false
-	i2, err := strconv.Atoi(c2)
-	if err == nil {
-		iFlag2 = true
-	}
-
-	// Compare
-	if iFlag1 && !iFlag2 {
-		return 1
-	} else if !iFlag1 && iFlag2 {
-		return -1
-	} else if iFlag1 && iFlag2 {
-		if i1 > i2 {
-			return 1
-		}
-		if i1 < i2 {
-			return -1
-		}
-	} else {
-		if c1 > c2 {
-			return 1
-		}
-		if c1 < c2 {
-			return -1
-		}
-	}
-
-	return 0
-}
-
-// if not include "s" return "sa" length
-func includeWithArray(sa []string, s string) int {
-	for i, q := range sa {
-		if q == s {
-			return i
-		}
-	}
-	return len(sa)
-}
-
-// Null value is 0 or ""
-func trimNullValue(list []string) []string {
-	for i := len(list) - 1; i > -1; i-- {
-		if list[i] == "0" || list[i] == "" {
-			list = list[:i]
+func trimNullSuffix(items []Item) []Item {
+	ret := items
+	for i := len(items) - 1; i >= 0; i-- {
+		if items[i].isNull() {
+			ret = ret[:i]
 		} else {
 			break
 		}
 	}
-	return list
-}
-
-func main() {
-	args := os.Args
-	if len(args) != 3 {
-		log.Fatal("args required 2 versions...")
-	}
-	v1 := Version(args[1])
-	v2 := Version(args[2])
-
-	if v1.GreaterThan(v2) {
-		fmt.Printf("%s greater than %s\n", v1, v2)
-	}
-	if v1.LessThan(v2) {
-		fmt.Printf("%s less than %s\n", v1, v2)
-	}
-	if v1.Equal(v2) {
-		fmt.Printf("%s equal %s\n", v1, v2)
-	}
+	return ret
 }
