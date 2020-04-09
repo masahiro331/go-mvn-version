@@ -80,11 +80,6 @@ func TestEqual(t *testing.T) {
 			v2:     "0-1",
 			expect: true,
 		},
-		{
-			v1:     "1-0.3",
-			v2:     "1",
-			expect: true,
-		},
 	}
 	for i, testCase := range testCases {
 		v1, err := NewVersion(testCase.v1)
@@ -108,6 +103,16 @@ func TestGreaterThan(t *testing.T) {
 		v2     string
 		expect bool
 	}{
+		{
+			v1:     "1",
+			v2:     "1.alpha",
+			expect: true,
+		},
+		{
+			v1:     "1",
+			v2:     "1-alpha",
+			expect: true,
+		},
 		{
 			v1:     "1--1",
 			v2:     "1-0-1",

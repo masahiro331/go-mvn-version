@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -13,18 +11,6 @@ var (
 )
 
 type ItemType int
-
-func (t ItemType) String() string {
-	switch t {
-	case StringType:
-		return "string type"
-	case IntType:
-		return "int type"
-	case ListType:
-		return "list type"
-	}
-	return ""
-}
 
 const (
 	StringType ItemType = iota
@@ -137,6 +123,9 @@ func (item1 StringItem) Compare(item2 Item) int {
 	switch item2.getType() {
 	case IntType:
 		if item2.isNull() {
+			if item1.includeWithArray(Qualifiers) < StringItem("").includeWithArray(Qualifiers) {
+				return -1
+			}
 			return 1
 		}
 		return -1
@@ -200,6 +189,9 @@ func (item1 IntItem) Compare(item2 Item) int {
 		}
 	case StringType:
 		if item1.isNull() && !item2.(StringItem).isNull() {
+			if item2.(StringItem).includeWithArray(Qualifiers) < StringItem("").includeWithArray(Qualifiers) {
+				return 1
+			}
 			return -1
 		}
 		return 1
@@ -272,20 +264,6 @@ func (items ListItem) isNull() bool {
 		}
 	}
 	return true
-}
-
-func main() {
-	v1, err := NewVersion("11.a")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	v2, err := NewVersion("11")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(v2.LessThan(*v1))
 }
 
 func stringItem(item string) StringItem {
