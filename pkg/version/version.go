@@ -49,7 +49,7 @@ func (v *Version) hasListItem() bool {
 }
 
 func (v1 *Version) Compare(v2 Version) int {
-	// Padding
+	// Padding version items.
 	ListPaddingFlag := (v1.hasListItem() || v2.hasListItem())
 
 	v1Items := v1.Items
@@ -73,10 +73,6 @@ func (v1 *Version) Compare(v2 Version) int {
 				}
 			}
 		}
-	}
-
-	if len(v1Items) != len(v2Items) {
-		panic("version padding error")
 	}
 
 	for i, item := range v1Items {
@@ -123,31 +119,38 @@ type StringItem string
 func (item1 StringItem) Compare(item2 Item) int {
 	switch item2.getType() {
 	case IntType:
+		//  11.alpha < 11.0 < 11.a
 		if item2.isNull() {
 			if item1.includeWithArray(Qualifiers) < StringItem("").includeWithArray(Qualifiers) {
 				return -1
 			}
 			return 1
 		}
+		// 11.a < 11.1
 		return -1
+
 	case StringType:
+		if item1 == item2.(StringItem) {
+			return 0
+		}
+
+		// "alpha", "beta", "milestone", "rc", "snapshot", "", "sp"
 		q1 := item1.includeWithArray(Qualifiers)
 		q2 := item2.(StringItem).includeWithArray(Qualifiers)
 		if q1 > q2 {
 			return 1
-		}
-		if q1 < q2 {
+		} else {
 			return -1
 		}
 
+		// 11.a < 11.b
 		if item1 > item2.(StringItem) {
 			return 1
-		} else if item1 < item2.(StringItem) {
-			return -1
-		} else {
-			return 0
 		}
+		return -1
+
 	case ListType:
+		// 11.a < 11-1
 		if len(item2.(ListItem)) == 0 {
 			return 1
 		}
@@ -181,14 +184,17 @@ type IntItem int
 func (item1 IntItem) Compare(item2 Item) int {
 	switch item2.getType() {
 	case IntType:
-		if item1 > item2.(IntItem) {
-			return 1
-		} else if item1 < item2.(IntItem) {
-			return -1
-		} else {
+		if item1 == item2.(IntItem) {
 			return 0
 		}
+
+		if item1 > item2.(IntItem) {
+			return 1
+		}
+		return -1
+
 	case StringType:
+		// 1.alpha < 1
 		if item1.isNull() && !item2.(StringItem).isNull() {
 			if item2.(StringItem).includeWithArray(Qualifiers) < StringItem("").includeWithArray(Qualifiers) {
 				return 1
@@ -196,6 +202,7 @@ func (item1 IntItem) Compare(item2 Item) int {
 			return -1
 		}
 		return 1
+
 	case ListType:
 		return 1
 	}
@@ -226,7 +233,7 @@ func (listitem1 ListItem) Compare(item2 Item) int {
 	case StringType:
 		return 1
 	case ListType:
-		// Padding
+		// Padding list items.
 		listitem2 := item2.(ListItem)
 		if div := len(listitem1) - len(listitem2); div != 0 {
 			if div > 0 {
@@ -239,9 +246,6 @@ func (listitem1 ListItem) Compare(item2 Item) int {
 					listitem1 = append(listitem1, IntItem(1))
 				}
 			}
-		}
-		if len(listitem1) != len(listitem2) {
-			panic("listitem padding error")
 		}
 
 		for i, item := range listitem1 {
@@ -280,6 +284,7 @@ func stringItem(item string) StringItem {
 	return StringItem(item)
 }
 
+// parseVersion is normalize version string.
 func parseVersion(v string) ([]Item, error) {
 	var stack []Item
 	var list ListItem
@@ -365,6 +370,8 @@ func parseVersion(v string) ([]Item, error) {
 	return append(ret, stack[1:]...), nil
 }
 
+// trimNullSuffix is triming null item.
+// ex... (1.0.0 == 1), (1-- == 1), (1.. == 1), (1.0.a.0 == 1.0.a)
 func trimNullSuffix(items []Item) []Item {
 	ret := items
 	for i := len(items) - 1; i >= 0; i-- {

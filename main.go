@@ -8,11 +8,11 @@ import (
 )
 
 func main() {
-	v1, err := version.NewVersion("5.0.1.RELEASE")
+	v1, err := version.NewVersion("1.alpha")
 	if err != nil {
 		log.Fatal(err)
 	}
-	v2, err := version.NewVersion("5.0.0.RELEASE")
+	v2, err := version.NewVersion("1")
 	if err != nil {
 		log.Fatal(err)
 	}

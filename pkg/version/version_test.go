@@ -109,6 +109,16 @@ func TestGreaterThan(t *testing.T) {
 			expect: true,
 		},
 		{
+			v1:     "1.1",
+			v2:     "1.0",
+			expect: true,
+		},
+		{
+			v1:     "1.a",
+			v2:     "1.0",
+			expect: true,
+		},
+		{
 			v1:     "1",
 			v2:     "1-alpha",
 			expect: true,
@@ -251,6 +261,26 @@ func TestLessThan(t *testing.T) {
 		v2     string
 		expect bool
 	}{
+		{
+			v1:     "1.alpha",
+			v2:     "1",
+			expect: true,
+		},
+		{
+			v1:     "1.0",
+			v2:     "1.1",
+			expect: true,
+		},
+		{
+			v1:     "1.0",
+			v2:     "1.a",
+			expect: true,
+		},
+		{
+			v1:     "1-alpha",
+			v2:     "1",
+			expect: true,
+		},
 		{
 			v1:     "1--1",
 			v2:     "1-0-1",
