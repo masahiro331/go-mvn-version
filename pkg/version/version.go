@@ -139,7 +139,7 @@ func (item1 StringItem) Compare(item2 Item) int {
 		q2 := item2.(StringItem).includeWithArray(Qualifiers)
 		if q1 > q2 {
 			return 1
-		} else {
+		} else if q1 < q2 {
 			return -1
 		}
 
