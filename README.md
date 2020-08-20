@@ -6,7 +6,7 @@ go-mvn-version is a library for parsing and comparing versions
 
 The implementation is based on [this specification](https://maven.apache.org/pom.html#Version_Order_Specification)
 
-ref: [maven implementation](https://github.com/apache/maven/commits/master/maven-artifact/src/main/java/org/apache/maven/artifact/versioning/ComparableVersion.java)
+other reference: [maven implementation](https://github.com/apache/maven/blob/master/maven-artifact/src/main/java/org/apache/maven/artifact/versioning/ComparableVersion.java)
 
 
 # Installation and Usage
@@ -29,12 +29,11 @@ if v1.GreaterThan(*v2) {
 ```
 
 # WARNING
-This implementation based on the [maven specification](https://maven.apache.org/pom.html#Version_Order_Specification), but not the [maven implementation](https://github.com/apache/maven/commits/master/maven-artifact/src/main/java/org/apache/maven/artifact/versioning/ComparableVersion.java)
-.
+This implementation based on the [maven specification](https://maven.apache.org/pom.html#Version_Order_Specification), but not the [maven implementation](https://github.com/apache/maven/blob/master/maven-artifact/src/main/java/org/apache/maven/artifact/versioning/ComparableVersion.java).
 
 See issues: [ComparableVersion incorrectly parses certain version strings](https://issues.apache.org/jira/browse/MNG-6420)
 ```
-$ go test ./pkg/...
+$ go test .
 --- FAIL: TestVersionsNumber (0.00s)
     version_test.go:415: expected: 2.0.a < 2.0.0.a
     version_test.go:418: expected: 2.0.0.a > 2.0.a

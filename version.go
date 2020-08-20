@@ -19,7 +19,7 @@ const (
 )
 
 type Version struct {
-	value string
+	Value string
 	Items []Item
 }
 
@@ -30,13 +30,13 @@ func NewVersion(v string) (*Version, error) {
 	}
 
 	return &Version{
-		value: v,
+		Value: v,
 		Items: parsedVer,
 	}, nil
 }
 
 func (v *Version) String() string {
-	return v.value
+	return v.Value
 }
 
 func (v *Version) hasListItem() bool {
@@ -119,7 +119,9 @@ type StringItem string
 func (item1 StringItem) Compare(item2 Item) int {
 	switch item2.getType() {
 	case IntType:
-		//  11.alpha < 11.0 < 11.a
+		// Then, starting from the end of the version, the trailing "null" values (0, "", "final", "ga") are trimmed.
+		// This process is repeated at each remaining hyphen from end to start.
+		//  e.g. 11.alpha < (11.0 normalize to 11) < 11.a
 		if item2.isNull() {
 			if item1.includeWithArray(Qualifiers) < StringItem("").includeWithArray(Qualifiers) {
 				return -1
@@ -134,7 +136,7 @@ func (item1 StringItem) Compare(item2 Item) int {
 			return 0
 		}
 
-		// "alpha", "beta", "milestone", "rc", "snapshot", "", "sp"
+		// Qualifiers is  "alpha" < "beta" < "milestone" < "rc" = "cr" < "snapshot" < "" = "final" = "ga" < "sp"
 		q1 := item1.includeWithArray(Qualifiers)
 		q2 := item2.(StringItem).includeWithArray(Qualifiers)
 		if q1 > q2 {
@@ -143,14 +145,16 @@ func (item1 StringItem) Compare(item2 Item) int {
 			return -1
 		}
 
-		// 11.a < 11.b
+		// Non-numeric ("qualifiers") tokens have the alphabetical order.
+		// e.g. 11.a is not 11-alpha;
 		if item1 > item2.(StringItem) {
 			return 1
 		}
 		return -1
 
 	case ListType:
-		// 11.a < 11-1
+		// ".qualifier" < "-qualifier" < "-number" < ".number"
+		// e.g. 11.a < 11-1
 		if len(item2.(ListItem)) == 0 {
 			return 1
 		}
@@ -194,6 +198,7 @@ func (item1 IntItem) Compare(item2 Item) int {
 		return -1
 
 	case StringType:
+		// ".qualifier" < "-qualifier" < "-number" < ".number"
 		// 1.alpha < 1
 		if item1.isNull() && !item2.(StringItem).isNull() {
 			if item2.(StringItem).includeWithArray(Qualifiers) < StringItem("").includeWithArray(Qualifiers) {
@@ -204,6 +209,9 @@ func (item1 IntItem) Compare(item2 Item) int {
 		return 1
 
 	case ListType:
+		// integer token always grater than list items
+		// ".qualifier" < "-qualifier" < "-number" < ".number"
+		// 1.alpha < 1
 		return 1
 	}
 	return 0
@@ -234,6 +242,7 @@ func (listitem1 ListItem) Compare(item2 Item) int {
 		return 1
 	case ListType:
 		// Padding list items.
+		// e.g. 1-1.foo-bar1baz-.1 normalize to 1-1.foo-bar-1-baz-0.1
 		listitem2 := item2.(ListItem)
 		if div := len(listitem1) - len(listitem2); div != 0 {
 			if div > 0 {
@@ -324,7 +333,6 @@ func parseVersion(v string) ([]Item, error) {
 
 		} else if _, err := strconv.Atoi(c); err == nil {
 			if !isDigit && i > startIndex {
-				// list = append(list, str[startIndex:i])
 				s, ok := Aliases[str[startIndex:i]]
 				if ok || s != "" {
 					list = append(list, stringItem(s))
@@ -340,7 +348,6 @@ func parseVersion(v string) ([]Item, error) {
 			isDigit = true
 		} else {
 			if isDigit && i > startIndex {
-				// list = append(list, parseItem(str[startIndex:i]))
 				list = append(list, parseItem(str[startIndex:i]))
 				startIndex = i
 
