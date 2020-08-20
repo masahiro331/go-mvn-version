@@ -23,7 +23,7 @@ import "github.com/masahiro331/go-mvn-version"
 v1, err := version.NewVersion("10-snapshot")
 v2, err := version.NewVersion("10-b1")
 
-if v1.GreaterThan(*v2)) {
+if v1.GreaterThan(*v2) {
     fmt.Printf("%s is greater than %s", v1, v2)
 }
 ```
