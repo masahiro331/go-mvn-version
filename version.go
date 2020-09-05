@@ -168,10 +168,7 @@ func (item StringItem) getType() ItemType {
 }
 
 func (item StringItem) isNull() bool {
-	if item == "" {
-		return true
-	}
-	return false
+	return item == ""
 }
 
 func (item StringItem) includeWithArray(sa []StringItem) int {
@@ -222,10 +219,7 @@ func (item IntItem) getType() ItemType {
 }
 
 func (item IntItem) isNull() bool {
-	if item == 0 {
-		return true
-	}
-	return false
+	return item == 0
 }
 
 type ListItem []Item
