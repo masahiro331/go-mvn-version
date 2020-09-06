@@ -241,12 +241,12 @@ func (listitem1 ListItem) Compare(item2 Item) int {
 		if div := len(listitem1) - len(listitem2); div != 0 {
 			if div > 0 {
 				for i := 0; i < div; i++ {
-					listitem2 = append(listitem2, IntItem(1))
+					listitem2 = append(listitem2, IntItem(0))
 				}
 			}
 			if div < 0 {
 				for i := div; i < 0; i++ {
-					listitem1 = append(listitem1, IntItem(1))
+					listitem1 = append(listitem1, IntItem(0))
 				}
 			}
 		}
