@@ -362,7 +362,11 @@ func parseVersion(v string) ([]Item, error) {
 		stack = append(stack, list)
 	}
 
-	ret := []Item{}
+	var ret []Item
+	if len(stack) == 0 {
+		stack = append(stack, list)
+	}
+
 	for _, item := range stack[0].(ListItem) {
 		ret = append(ret, item)
 	}
