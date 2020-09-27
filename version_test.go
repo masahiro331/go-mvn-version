@@ -255,6 +255,11 @@ func TestGreaterThan(t *testing.T) {
 			v2:     "1-1.foo",
 			expect: true,
 		},
+		{
+			v1:     "1.foo-1",
+			v2:     "1",
+			expect: true,
+		},
 	}
 	for i, testCase := range testCases {
 		v1, err := version.NewVersion(testCase.v1)
