@@ -97,6 +97,11 @@ func TestEqual(t *testing.T) {
 			v2:     "1-1-ga",
 			expect: true,
 		},
+		{
+			v1:     "1-1.ga",
+			v2:     "1-1.0",
+			expect: true,
+		},
 	}
 	for i, testCase := range testCases {
 		v1, err := version.NewVersion(testCase.v1)
