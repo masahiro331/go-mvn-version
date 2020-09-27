@@ -1,258 +1,179 @@
 package version
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
 
 var (
-	Qualifiers = []StringItem{"alpha", "beta", "milestone", "rc", "snapshot", "", "sp"}
-	Aliases    = map[string]string{"ga": "", "final": "", "release": "", "cr": "rc"}
-)
-
-type ItemType int
-
-const (
-	StringType ItemType = iota
-	IntType
-	ListType
+	Qualifiers          = []string{"alpha", "beta", "milestone", "rc", "snapshot", "", "sp"}
+	Aliases             = map[string]string{"ga": "", "final": "", "release": "", "cr": "rc"}
+	ReleaseVersionIndex = fmt.Sprint(indexOf("", Qualifiers))
 )
 
 type Version struct {
 	Value string
-	Items []Item
+	Items ListItem
 }
 
-func NewVersion(v string) (*Version, error) {
-	parsedVer, err := parseVersion(v)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Version{
+func NewVersion(v string) (Version, error) {
+	return Version{
 		Value: v,
-		Items: parsedVer,
+		Items: parseVersion(v),
 	}, nil
 }
 
-func (v *Version) String() string {
-	return v.Value
+func (v1 Version) String() string {
+	return v1.Value
 }
 
-func (v *Version) hasListItem() bool {
-	for _, item := range v.Items {
-		if item.getType() == ListType {
-			return true
-		}
-	}
-	return false
+func (v1 Version) Compare(v2 Version) int {
+	return v1.Items.Compare(v2.Items)
 }
 
-func (v1 *Version) Compare(v2 Version) int {
-	// Padding version items.
-	ListPaddingFlag := (v1.hasListItem() || v2.hasListItem())
-
-	v1Items := v1.Items
-	v2Items := v2.Items
-	if div := len(v1Items) - len(v2Items); div != 0 {
-		if div > 0 {
-			for i := 0; i < div; i++ {
-				if ListPaddingFlag {
-					v2Items = append(v2Items, ListItem{StringItem("")})
-				} else {
-					v2Items = append(v2Items, IntItem(0))
-				}
-			}
-		}
-		if div < 0 {
-			for i := div; i < 0; i++ {
-				if ListPaddingFlag {
-					v1Items = append(v1Items, ListItem{StringItem("")})
-				} else {
-					v1Items = append(v1Items, IntItem(0))
-				}
-			}
-		}
-	}
-
-	for i, item := range v1Items {
-		if item.isNull() && v2Items[i].isNull() {
-			continue
-		}
-		result := item.Compare(v2Items[i])
-		if result != 0 {
-			return result
-		}
-	}
-
-	return 0
-}
-
-func (v1 *Version) Equal(v2 Version) bool {
+func (v1 Version) Equal(v2 Version) bool {
 	return v1.Compare(v2) == 0
 }
 
-func (v1 *Version) GreaterThan(v2 Version) bool {
+func (v1 Version) GreaterThan(v2 Version) bool {
 	return v1.Compare(v2) > 0
 }
 
-func (v1 *Version) LessThan(v2 Version) bool {
+func (v1 Version) LessThan(v2 Version) bool {
 	return v1.Compare(v2) < 0
 }
 
 type Item interface {
 	Compare(v2 Item) int
-	getType() ItemType
 	isNull() bool
 }
 
-func parseItem(item string) Item {
-	i, err := strconv.Atoi(item)
-	if err != nil {
-		return StringItem(item)
+func parseItem(isDigit bool, item string) Item {
+	if isDigit {
+		i, _ := strconv.Atoi(item)
+		return IntItem(i)
 	}
-	return IntItem(i)
-}
-
-type StringItem string
-
-func (item1 StringItem) Compare(item2 Item) int {
-	switch item2.getType() {
-	case IntType:
-		// Then, starting from the end of the version, the trailing "null" values (0, "", "final", "ga") are trimmed.
-		// This process is repeated at each remaining hyphen from end to start.
-		//  e.g. 11.alpha < (11.0 normalize to 11) < 11.a
-		if item2.isNull() {
-			if item1.includeWithArray(Qualifiers) < StringItem("").includeWithArray(Qualifiers) {
-				return -1
-			}
-			return 1
-		}
-		// 11.a < 11.1
-		return -1
-
-	case StringType:
-		if item1 == item2.(StringItem) {
-			return 0
-		}
-
-		// Qualifiers is  "alpha" < "beta" < "milestone" < "rc" = "cr" < "snapshot" < "" = "final" = "ga" < "sp"
-		q1 := item1.includeWithArray(Qualifiers)
-		q2 := item2.(StringItem).includeWithArray(Qualifiers)
-		if q1 > q2 {
-			return 1
-		} else if q1 < q2 {
-			return -1
-		}
-
-		// Non-numeric ("qualifiers") tokens have the alphabetical order.
-		// e.g. 11.a is not 11-alpha;
-		if item1 > item2.(StringItem) {
-			return 1
-		}
-		return -1
-
-	case ListType:
-		// ".qualifier" < "-qualifier" < "-number" < ".number"
-		// e.g. 11.a < 11-1
-		if len(item2.(ListItem)) == 0 {
-			return 1
-		}
-		return -1
-	}
-	return 0
-}
-
-func (item StringItem) getType() ItemType {
-	return StringType
-}
-
-func (item StringItem) isNull() bool {
-	return item == ""
-}
-
-func (item StringItem) includeWithArray(sa []StringItem) int {
-	for i, q := range sa {
-		if q == item {
-			return i
-		}
-	}
-	return len(sa)
+	return newStringItem(item, false)
 }
 
 type IntItem int
 
 func (item1 IntItem) Compare(item2 Item) int {
-	switch item2.getType() {
-	case IntType:
-		if item1 == item2.(IntItem) {
+	if item2 == nil {
+		if item1 == 0 {
 			return 0
 		}
+		return 1 // 1.0 == 1, 1.1 > 1
+	}
 
-		if item1 > item2.(IntItem) {
-			return 1
-		}
-		return -1
-
-	case StringType:
-		// ".qualifier" < "-qualifier" < "-number" < ".number"
-		// 1.alpha < 1
-		if item1.isNull() && !item2.(StringItem).isNull() {
-			if item2.(StringItem).includeWithArray(Qualifiers) < StringItem("").includeWithArray(Qualifiers) {
-				return 1
-			}
-			return -1
-		}
-		return 1
-
-	case ListType:
-		// integer token always grater than list items
-		// ".qualifier" < "-qualifier" < "-number" < ".number"
-		// 1.alpha < 1
-		return 1
+	switch t := item2.(type) {
+	case IntItem:
+		return compareInt(int(item1), int(t))
+	case StringItem:
+		return 1 // 1.1 > 1-sp
+	case ListItem:
+		return 1 // 1.1 > 1-1
 	}
 	return 0
 }
 
-func (item IntItem) getType() ItemType {
-	return IntType
+func (item1 IntItem) isNull() bool {
+	return item1 == 0
 }
 
-func (item IntItem) isNull() bool {
-	return item == 0
+type StringItem string
+
+func newStringItem(value string, followedByDigit bool) StringItem {
+	if followedByDigit {
+		switch value {
+		case "a":
+			return "alpha"
+		case "b":
+			return "beta"
+		case "m":
+			return "milestone"
+		}
+	}
+
+	v, ok := Aliases[value]
+	if ok {
+		return StringItem(v)
+	}
+	return StringItem(value)
+}
+
+func (item1 StringItem) Compare(item2 Item) int {
+	if item2 == nil {
+		// 1-rc < 1, 1-ga > 1
+		return strings.Compare(item1.comparableQualifier(), ReleaseVersionIndex)
+	}
+
+	switch v := item2.(type) {
+	case IntItem:
+		return -1
+	case StringItem:
+		return strings.Compare(item1.comparableQualifier(), v.comparableQualifier())
+	case ListItem:
+		return -1 // 1.any < 1-1
+	}
+	return 0
+}
+
+func (item1 StringItem) isNull() bool {
+	return item1 == ""
+}
+
+func (item1 StringItem) comparableQualifier() string {
+	index := indexOf(string(item1), Qualifiers)
+	if index == -1 {
+		return fmt.Sprintf("%d-%s", len(Qualifiers), item1)
+	}
+	return fmt.Sprint(index)
+}
+
+func indexOf(s string, sa []string) int {
+	for i, q := range sa {
+		if q == s {
+			return i
+		}
+	}
+	return -1
 }
 
 type ListItem []Item
 
-func (item ListItem) getType() ItemType {
-	return ListType
-}
-
-func (listitem1 ListItem) Compare(item2 Item) int {
-	switch item2.getType() {
-	case IntType:
-		return -1
-	case StringType:
-		return 1
-	case ListType:
-		// Padding list items.
-		// e.g. 1-1.foo-bar1baz-.1 normalize to 1-1.foo-bar-1-baz-0.1
-		listitem2 := item2.(ListItem)
-		if div := len(listitem1) - len(listitem2); div != 0 {
-			if div > 0 {
-				for i := 0; i < div; i++ {
-					listitem2 = append(listitem2, IntItem(0))
-				}
-			}
-			if div < 0 {
-				for i := div; i < 0; i++ {
-					listitem1 = append(listitem1, IntItem(0))
-				}
+func (items1 ListItem) Compare(item2 Item) int {
+	if item2 == nil {
+		if len(items1) == 0 {
+			return 0 // 1-0 = 1- (normalize) = 1
+		}
+		// Compare the entire list of items with null - not just the first one, MNG-6964
+		for _, item := range items1 {
+			if result := item.Compare(nil); result != 0 {
+				return result
 			}
 		}
+		return 0
+	}
 
-		for i, item := range listitem1 {
-			result := item.Compare(listitem2[i])
+	switch v := item2.(type) {
+	case IntItem:
+		return -1 // 1-1 < 1.0.x
+	case StringItem:
+		return 1 // 1-1 > 1-sp
+	case ListItem:
+		iter := zip(items1, v)
+		for tuple := iter(); tuple != nil; tuple = iter() {
+			l, r := tuple[0], tuple[1]
+
+			var result int
+			if l == nil {
+				// if this is shorter, then invert the compare and mul with -1
+				result = -1 * r.Compare(l)
+			} else {
+				result = l.Compare(r)
+			}
 			if result != 0 {
 				return result
 			}
@@ -262,34 +183,44 @@ func (listitem1 ListItem) Compare(item2 Item) int {
 	return 0
 }
 
-func (items ListItem) isNull() bool {
-	if len(items) == 0 {
-		return true
-	}
-	for _, item := range items {
-		if !item.isNull() {
-			return false
-		}
-	}
-	return true
+func (items1 ListItem) isNull() bool {
+	return len(items1) == 0
 }
 
-func stringItem(item string) StringItem {
-	switch item {
-	case "a":
-		return StringItem("alpha")
-	case "b":
-		return StringItem("beta")
-	case "m":
-		return StringItem("milestone")
+func (items1 ListItem) normalize() ListItem {
+	ret := items1
+	for i := len(items1) - 1; i >= 0; i-- {
+		lastItem := items1[i]
+		if lastItem.isNull() {
+			ret = ret[:i]
+		} else if _, ok := lastItem.(ListItem); !ok {
+			break
+		}
 	}
+	return ret
+}
 
-	return StringItem(item)
+func zip(a, b ListItem) func() []Item {
+	i := 0
+	return func() []Item {
+		var item1, item2 Item
+		if i < len(a) {
+			item1 = a[i]
+		}
+		if i < len(b) {
+			item2 = b[i]
+		}
+		if item1 == nil && item2 == nil {
+			return nil
+		}
+		i++
+		return []Item{item1, item2}
+	}
 }
 
 // parseVersion is normalize version string.
-func parseVersion(v string) ([]Item, error) {
-	var stack []Item
+func parseVersion(v string) ListItem {
+	stack := new(ListItemStack)
 	var list ListItem
 
 	isDigit := false
@@ -298,93 +229,65 @@ func parseVersion(v string) ([]Item, error) {
 	sa := strings.Split(str, "")
 	for i, c := range sa {
 		if c == "." {
-			if i != startIndex {
-				s, ok := Aliases[str[startIndex:i]]
-				if ok || s != "" {
-					list = append(list, parseItem(s))
-				} else {
-					list = append(list, parseItem(str[startIndex:i]))
-				}
-			} else {
+			if i == startIndex {
 				list = append(list, IntItem(0))
+			} else {
+				list = append(list, parseItem(isDigit, str[startIndex:i]))
 			}
 			startIndex = i + 1
 		} else if c == "-" {
-			if i != startIndex {
-				s, ok := Aliases[str[startIndex:i]]
-				if ok || s != "" {
-					list = append(list, parseItem(s))
-				} else {
-					list = append(list, parseItem(str[startIndex:i]))
-				}
-			} else {
+			if i == startIndex {
 				list = append(list, IntItem(0))
+			} else {
+				list = append(list, parseItem(isDigit, str[startIndex:i]))
 			}
 			startIndex = i + 1
 
-			stack = append(stack, list)
+			stack.Push(list)
 			list = ListItem{}
 
 		} else if _, err := strconv.Atoi(c); err == nil {
 			if !isDigit && i > startIndex {
-				s, ok := Aliases[str[startIndex:i]]
-				if ok || s != "" {
-					list = append(list, stringItem(s))
-				} else {
-					list = append(list, stringItem(str[startIndex:i]))
-				}
+				list = append(list, newStringItem(str[startIndex:i], true))
 				startIndex = i
 
-				stack = append(stack, list)
+				stack.Push(list)
 				list = ListItem{}
 			}
 
 			isDigit = true
 		} else {
 			if isDigit && i > startIndex {
-				list = append(list, parseItem(str[startIndex:i]))
+				list = append(list, parseItem(true, str[startIndex:i]))
 				startIndex = i
 
-				stack = append(stack, list)
+				stack.Push(list)
 				list = ListItem{}
 			}
 			isDigit = false
 		}
 	}
 	if len(v) > startIndex {
-		s, ok := Aliases[str[startIndex:]]
-		if ok || s != "" {
-			list = append(list, parseItem(s))
-		} else {
-			list = append(list, parseItem(str[startIndex:]))
-		}
-
-		stack = append(stack, list)
+		list = append(list, parseItem(isDigit, str[startIndex:]))
+		stack.Push(list)
 	}
 
-	var ret []Item
-	if len(stack) == 0 {
-		stack = append(stack, list)
+	if stack.IsEmpty() {
+		stack.Push(list)
 	}
 
-	for _, item := range stack[0].(ListItem) {
-		ret = append(ret, item)
-	}
-	ret = trimNullSuffix(ret)
-
-	return append(ret, stack[1:]...), nil
-}
-
-// trimNullSuffix is triming null item.
-// ex... (1.0.0 == 1), (1-- == 1), (1.. == 1), (1.0.a.0 == 1.0.a)
-func trimNullSuffix(items []Item) []Item {
-	ret := items
-	for i := len(items) - 1; i >= 0; i-- {
-		if items[i].isNull() {
-			ret = ret[:i]
-		} else {
-			break
-		}
+	ret := stack.Pop().normalize()
+	for !stack.IsEmpty() {
+		ret = append(stack.Pop().normalize(), ret)
 	}
 	return ret
+}
+
+func compareInt(a, b int) int {
+	if a == b {
+		return 0
+	} else if a > b {
+		return 1
+	}
+	return -1
 }
