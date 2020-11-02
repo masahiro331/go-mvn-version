@@ -92,6 +92,16 @@ func TestEqual(t *testing.T) {
 			v2:     "1-",
 			expect: true,
 		},
+		{
+			v1:     "1-1.ga",
+			v2:     "1-1-ga",
+			expect: true,
+		},
+		{
+			v1:     "1-1.ga",
+			v2:     "1-1.0",
+			expect: true,
+		},
 	}
 	for i, testCase := range testCases {
 		v1, err := version.NewVersion(testCase.v1)
@@ -102,7 +112,7 @@ func TestEqual(t *testing.T) {
 		if err != nil {
 			t.Errorf("parse error")
 		}
-		actual := v1.Equal(*v2)
+		actual := v1.Equal(v2)
 		if testCase.expect != actual {
 			t.Errorf("No: %d\nactual:%t\nexpect:%t\nv1: %s\nv2: %s\n", i+1, actual, testCase.expect, testCase.v1, testCase.v2)
 		}
@@ -250,6 +260,16 @@ func TestGreaterThan(t *testing.T) {
 			v2:     "1-1",
 			expect: true,
 		},
+		{
+			v1:     "1-1-foo",
+			v2:     "1-1.foo",
+			expect: true,
+		},
+		{
+			v1:     "1.foo-1",
+			v2:     "1",
+			expect: true,
+		},
 	}
 	for i, testCase := range testCases {
 		v1, err := version.NewVersion(testCase.v1)
@@ -260,7 +280,7 @@ func TestGreaterThan(t *testing.T) {
 		if err != nil {
 			t.Errorf("parse error")
 		}
-		actual := v1.GreaterThan(*v2)
+		actual := v1.GreaterThan(v2)
 		if testCase.expect != actual {
 			t.Errorf("No: %d\nactual:%t\nexpect:%t\nv1: %s\nv2: %s\n", i+1, actual, testCase.expect, testCase.v1, testCase.v2)
 		}
@@ -378,7 +398,7 @@ func TestLessThan(t *testing.T) {
 		if err != nil {
 			t.Errorf("parse error")
 		}
-		actual := v1.LessThan(*v2)
+		actual := v1.LessThan(v2)
 		if testCase.expect != actual {
 			t.Errorf("No: %d\nactual:%t\nexpect:%t\nv1: %s\nv2: %s\n", i+1, actual, testCase.expect, testCase.v1, testCase.v2)
 		}
@@ -400,10 +420,10 @@ func TestVersionQualifier(t *testing.T) {
 			if err != nil {
 				t.Errorf("parse error")
 			}
-			if !low.LessThan(*high) {
+			if !low.LessThan(high) {
 				t.Errorf("expected: %s < %s \n", low, high)
 			}
-			if !high.GreaterThan(*low) {
+			if !high.GreaterThan(low) {
 				t.Errorf("expected: %s > %s \n", high, low)
 			}
 		}
@@ -448,10 +468,10 @@ func TestVersionsNumber(t *testing.T) {
 			if err != nil {
 				t.Errorf("parse error")
 			}
-			if !low.LessThan(*high) {
+			if !low.LessThan(high) {
 				t.Errorf("expected: %s < %s \n", low.Value, high.Value)
 			}
-			if !high.GreaterThan(*low) {
+			if !high.GreaterThan(low) {
 				t.Errorf("expected: %s > %s \n", high, low)
 			}
 		}
