@@ -167,6 +167,21 @@ func TestVersion_Check(t *testing.T) {
 		{"> 1.0	< 1.2 || >3.0", "1.1", true},
 		{"> 1.0, < 1.2 || >3.0", "4.2", true},
 		{"> 1.0 < 1.2 || >3.0, <4.0", "4.2", false},
+
+		// add more tests
+		{"< 0.3.0M2", "0.3.0m1", true},
+		{"= 0.3.0M2", "0.3.0m2", true},
+		{"> 0.3.0M2", "0.3.0m3", true},
+		{"0.3.0M2", "0.3.0-milestone-2", true},
+		{"< 9.2.25.v20180606", "9.2.25.v20180605", true},
+		{"< 1.1.1.v2", "1.1.1.v1", true},
+		{"< 1.1.v2", "1.1.v1", true},
+		{"< 1.v2", "1.v1", true},
+		{"< v2", "v1", true},
+		{"< 1.1.1.2", "1.1.1.1", true},
+		{"< 1.1.2", "1.1.1", true},
+		{"< 1.2", "1.1", true},
+		{"< 2", "1", true},
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s %s", tt.version, tt.constraint), func(t *testing.T) {
