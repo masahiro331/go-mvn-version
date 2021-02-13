@@ -20,9 +20,6 @@ var (
 		"=>": constraintGreaterThanEqual,
 		"<=": constraintLessThanEqual,
 		"=<": constraintLessThanEqual,
-		// "~>": constraintPessimistic,
-		// "~":  constraintTilde,
-		// "^":  constraintCaret,
 	}
 	constraintRegexp      *regexp.Regexp
 	validConstraintRegexp *regexp.Regexp
