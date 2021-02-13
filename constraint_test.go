@@ -14,16 +14,19 @@ func TestNewConstraints(t *testing.T) {
 		wantErr    bool
 	}{
 		{"> 1.0", false},
-		{"= abc", true},
-		{"> 1.0 || < foo", true},
+		{"= abc", false},
+		{"> 1.0 || < foo", false},
 		{">= 1.2.3, < 2.0 || => 3.0, < 4", false},
-
+		{">= 1.0.1.v100000", false},
 		{">= 1.1", false},
 		{">40.50.60, < 50.70", false},
 		{"2.0", false},
 		{"2.3.5-20161202202307-sha.e8fc5e5", false},
-		{">= bar", true},
-		{"BAR >= 1.2.3", true},
+		{">= bar", false},
+		{">= 1.1.1.v1", false},
+		{">= 1.1.1.1v", false},
+		{"==1.1.1.1v", false},
+		{"BAR >= 1.2.3", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.constraint, func(t *testing.T) {
@@ -173,6 +176,7 @@ func TestVersion_Check(t *testing.T) {
 		{"= 0.3.0M2", "0.3.0m2", true},
 		{"> 0.3.0M2", "0.3.0m3", true},
 		{"0.3.0M2", "0.3.0-milestone-2", true},
+		{"> 0.3.0M2", "0.3.0-milestone-3", true},
 		{"< 9.2.25.v20180606", "9.2.25.v20180605", true},
 		{"< 1.1.1.v2", "1.1.1.v1", true},
 		{"< 1.1.v2", "1.1.v1", true},
