@@ -156,7 +156,6 @@ func TestVersion_Check(t *testing.T) {
 		{"> 1.0.0.0.1 < 1.0.0.1 || = 2.0.5.4.8", "1.0.0.0.9", true},
 
 		// Leading zeroes
-		// https://docs.microsoft.com/en-us/nuget/concepts/package-versioning#normalized-version-numbers
 		{">1.2.3", "1.02.4", true},
 		{"<1.3.09", "1.05.4", false},
 
@@ -171,7 +170,7 @@ func TestVersion_Check(t *testing.T) {
 		{"> 1.0, < 1.2 || >3.0", "4.2", true},
 		{"> 1.0 < 1.2 || >3.0, <4.0", "4.2", false},
 
-		// add more tests
+		// add more tests from ghsa data
 		{"< 0.3.0M2", "0.3.0m1", true},
 		{"= 0.3.0M2", "0.3.0m2", true},
 		{"> 0.3.0M2", "0.3.0m3", true},
