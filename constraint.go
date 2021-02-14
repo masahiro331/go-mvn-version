@@ -102,13 +102,13 @@ func newConstraint(c string) (constraint, error) {
 		original: c,
 	}, nil
 }
+
 func (cs Constraints) Check(v Version) bool {
 	for _, c := range cs.constraints {
 		if andCheck(v, c) {
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -129,7 +129,7 @@ func (c constraint) String() string {
 	return c.original
 }
 
-// Returns the string format of the constraints
+// String returns the string format of the constraints
 func (cs Constraints) String() string {
 	var csStr []string
 	for _, orC := range cs.constraints {
@@ -139,7 +139,6 @@ func (cs Constraints) String() string {
 		}
 		csStr = append(csStr, strings.Join(cstr, ","))
 	}
-
 	return strings.Join(csStr, "||")
 }
 
