@@ -1,6 +1,6 @@
 module github.com/masahiro331/go-mvn-version
 
-go 1.13
+go 1.15
 
 require (
 	github.com/stretchr/testify v1.7.0
