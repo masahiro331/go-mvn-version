@@ -44,6 +44,14 @@ func (v1 Version) LessThan(v2 Version) bool {
 	return v1.Compare(v2) < 0
 }
 
+func (v1 Version) GreaterThanOrEqual(v2 Version) bool {
+	return v1.Compare(v2) >= 0
+}
+
+func (v1 Version) LessThanOrEqual(v2 Version) bool {
+	return v1.Compare(v2) <= 0
+}
+
 type Item interface {
 	Compare(v2 Item) int
 	isNull() bool
