@@ -29,6 +29,15 @@ func TestNewConstraints(t *testing.T) {
 		{"BAR >= 1.2.3", false},
 		{"!= !=", true},
 		{"bar <", true},
+		{"== a\\", true},
+		{"== a/", true},
+		{"== a:", true},
+		{"== a\"", true},
+		{"== a<", true},
+		{"== a>", true},
+		{"== a|", true},
+		{"== a?", true},
+		{"== a*", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.constraint, func(t *testing.T) {
