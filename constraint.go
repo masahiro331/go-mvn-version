@@ -26,7 +26,7 @@ var (
 )
 
 const (
-	regex = `([0-9A-Za-z\-~\.]+)`
+	constraintRegex = `([0-9A-Za-z\-~\.]+)`
 )
 
 func init() {
@@ -38,12 +38,12 @@ func init() {
 	constraintRegexp = regexp.MustCompile(fmt.Sprintf(
 		`(%s)\s*(%s)`,
 		strings.Join(ops, "|"),
-		regex))
+		constraintRegex))
 
 	validConstraintRegexp = regexp.MustCompile(fmt.Sprintf(
 		`^\s*(\s*(%s)\s*(%s)\s*\,?)*\s*$`,
 		strings.Join(ops, "|"),
-		regex))
+		constraintRegex))
 }
 
 type operatorFunc func(v, c Version) bool

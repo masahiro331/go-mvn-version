@@ -13,6 +13,9 @@ func TestNewRequirements(t *testing.T) {
 		requirement string
 		wantErr     bool
 	}{
+		// if soft requirement for 1.0. Use constraints compare
+		{"1.0", true},
+
 		{"(, 1.0)", false},
 		{"(,1.0)", false},
 		{"(, 1.0]", false},
@@ -77,9 +80,11 @@ func TestRequirementsCheck(t *testing.T) {
 		want        bool
 	}{
 		{"[,1.0.0]", "0.9", true},
+		{"[,1.0.0]", "1.0", true},
 		{"[,1.0.0]", "1.1", false},
 
 		{"(,1.0.0]", "0.9", true},
+		{"(,1.0.0]", "1.0", true},
 		{"(,1.0.0]", "1.1", false},
 
 		{"(,1.0.0)", "0.9", true},
@@ -94,9 +99,9 @@ func TestRequirementsCheck(t *testing.T) {
 		{"[0,)", "1.0.0", true},
 		{"[0,)", "1.0.1", true},
 
-		{"(,0)", "0.9", true},
-		{"(,0)", "1.0.0", true},
-		{"(,0)", "1.0.1", true},
+		{"(,0)", "0.9", false},
+		{"(,0)", "1.0.0", false},
+		{"(,0)", "1.0.1", false},
 
 		{"[,]", "0.9", true},
 		{"[,]", "1.0.0", true},
@@ -110,13 +115,14 @@ func TestRequirementsCheck(t *testing.T) {
 		{"[1.0.0]", "1.0.1", false},
 		{"[1.0.0]", "0.9", false},
 
-		{"[1.0.0]", "1.0.0", true},
-		{"[1.0.0]", "1.0.1", false},
-		{"[1.0.0]", "0.9", false},
+		// (1.0.0) is not defined requirements. use [1.0.0] compare.
+		{"(1.0.0)", "1.0.0", true},
+		{"(1.0.0)", "1.0.1", false},
+		{"(1.0.0)", "0.9", false},
 
 		{"[1.0,2.0)", "1.0.0", true},
 		{"[1.0,2.0)", "1.5", true},
-		{"[1.0,2.0)", "0.9", true},
+		{"[1.0,2.0)", "0.9", false},
 		{"[1.0,2.0)", "2.0", false},
 
 		{"[1.0,2.0]", "1.0.0", true},
@@ -124,6 +130,17 @@ func TestRequirementsCheck(t *testing.T) {
 		{"[1.0,2.0]", "2.0", true},
 		{"[1.0,2.0]", "0.9", false},
 		{"[1.0,2.0]", "2.1", false},
+
+		{"(1.0,2.0]", "1.0.0", false},
+		{"(1.0,2.0]", "1.5", true},
+		{"(1.0,2.0]", "2.0", true},
+		{"(1.0,2.0]", "0.9", false},
+		{"(1.0,2.0]", "2.1", false},
+		{"(1.0,2.0]", "2.1", false},
+
+		{"(,1.0.5.RELEASE],[2.0.0.RELEASE,2.0.16.RELEASE),[2.1.0.RELEASE,2.1.3.RELEASE)", "1.0.0", true},
+		{"(,1.0.5.RELEASE],[2.0.0.RELEASE,2.0.16.RELEASE),[2.1.0.RELEASE,2.1.3.RELEASE)", "2.0.0", true},
+		{"(,1.0.5.RELEASE],[2.0.0.RELEASE,2.0.16.RELEASE),[2.1.0.RELEASE,2.1.3.RELEASE)", "2.1.3", false},
 	}
 
 	for _, tt := range tests {

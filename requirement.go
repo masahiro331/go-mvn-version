@@ -1,13 +1,26 @@
 package version
 
-var (
-	requirementOperation = map[string]operatorFunc{}
+import (
+	"regexp"
+	"strings"
+
+	"golang.org/x/xerrors"
 )
 
-const ()
+var requirementRegexp *regexp.Regexp
+
+const (
+	MINVersion       = "-1"
+	MAXVersion       = "99999999999999999999"
+	requirementRegex = `(` +
+		`[\[\(]` +
+		`[0-9A-Za-z\-\.,]+` +
+		`[\]\)]` +
+		`)`
+)
 
 func init() {
-
+	requirementRegexp = regexp.MustCompile(requirementRegex)
 }
 
 type Requirements struct {
@@ -20,8 +33,93 @@ type requirement struct {
 	original string
 }
 
+// NewRequirements is return Requirement
+// [1.0.0], [1.0.1]	=> []requirement{"[1.0.0]","[1.0.1]"}
+// [1.0.0]			=> []requirement{"[1.0.0]"}
 func NewRequirements(v string) (Requirements, error) {
-	return Requirements{}, nil
+	var rss [][]requirement
+	// trimSpace "[ , 1.0.0]" => "[,1.0.0]"
+	v = trimSpaces(v)
+
+	// Normalization
+	// "(,1.0.0)"				=> "(MIN, 1.0.0)"
+	// "(1.0.0,)"				=> "[1.0.0, MAX)"
+	// "[1.0.0]"				=> "[1.0.0, 1.0.0]"
+	// "(1.0.0]"				=> "[1.0.0, 1.0.0]"
+	// "[,1.0.0],[1.0.0,1.1]"	=> "[,1.0.0]", "[1.0.0,1.1]"
+	requirements := requirementRegexp.FindAllString(v, -1)
+	if len(requirements) == 0 {
+		return Requirements{}, xerrors.Errorf("improper requirements: %v", requirements)
+	}
+
+	for _, r := range requirements {
+		var rs []requirement
+		ss := strings.Split(r, ",")
+		if len(ss) > 2 {
+			return Requirements{}, xerrors.Errorf("improper requirement length: %v", r)
+		}
+		if len(ss) == 1 && checkEqualOperator(ss[0]) {
+			nr, err := newRequirement(ss[0])
+			if err != nil {
+				return Requirements{}, xerrors.Errorf("failed to parse requirement: %w", err)
+			}
+			rss = append(rss, append(rs, nr))
+			continue
+		}
+
+		if len(ss[0]) == 1 {
+			ss[0] = ss[0] + MINVersion
+		}
+
+		if len(ss[1]) == 1 {
+			ss[1] = MAXVersion + ss[1]
+		}
+
+		for _, single := range ss {
+			nr, err := newRequirement(single)
+			if err != nil {
+				return Requirements{}, xerrors.Errorf("failed to parse requirement: %w", err)
+			}
+			rs = append(rs, nr)
+		}
+		rss = append(rss, rs)
+	}
+	return Requirements{
+		requirements: rss,
+	}, nil
+}
+
+func newRequirement(r string) (requirement, error) {
+	var v Version
+	var err error
+	var operator operatorFunc
+	switch {
+	case checkEqualOperator(r):
+		v, err = NewVersion(r[1 : len(r)-2])
+		operator = requirementEqual
+	case strings.HasPrefix(r, "["):
+		v, err = NewVersion(strings.TrimPrefix(r, "["))
+		operator = requirementGreaterThanEqual
+	case strings.HasPrefix(r, "("):
+		v, err = NewVersion(strings.TrimPrefix(r, "("))
+		operator = requirementGreaterThan
+	case strings.HasSuffix(r, "]"):
+		v, err = NewVersion(strings.TrimSuffix(r, "]"))
+		operator = requirementLessThanEqual
+	case strings.HasSuffix(r, ")"):
+		v, err = NewVersion(strings.TrimSuffix(r, ")"))
+		operator = requirementLessThan
+	default:
+		return requirement{}, xerrors.New("parser new requirement error")
+	}
+	if err != nil {
+		return requirement{}, xerrors.Errorf("failed to new version: %w", err)
+	}
+	return requirement{
+		version:  v,
+		operator: operator,
+		original: r,
+	}, nil
 }
 
 func (rs Requirements) Check(v Version) bool {
@@ -44,4 +142,40 @@ func andRequirementCheck(v Version, requirements []requirement) bool {
 
 func (r requirement) check(v Version) bool {
 	return r.operator(v, r.version)
+}
+
+func trimSpaces(s string) string {
+	return strings.Join(strings.Fields(s), "")
+}
+
+func checkEqualOperator(r string) bool {
+	if (strings.HasPrefix(r, "[") || strings.HasPrefix(r, "(")) &&
+		(strings.HasSuffix(r, "]") || strings.HasSuffix(r, ")")) {
+		return true
+	}
+	return false
+}
+
+//-------------------------------------------------------------------
+// Requirement functions
+//-------------------------------------------------------------------
+
+func requirementEqual(v, c Version) bool {
+	return v.Equal(c)
+}
+
+func requirementGreaterThan(v, c Version) bool {
+	return v.GreaterThan(c)
+}
+
+func requirementLessThan(v, c Version) bool {
+	return v.LessThan(c)
+}
+
+func requirementGreaterThanEqual(v, c Version) bool {
+	return v.GreaterThanOrEqual(c)
+}
+
+func requirementLessThanEqual(v, c Version) bool {
+	return v.LessThanOrEqual(c)
 }
