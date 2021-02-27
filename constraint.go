@@ -105,14 +105,14 @@ func newConstraint(c string) (constraint, error) {
 
 func (cs Constraints) Check(v Version) bool {
 	for _, c := range cs.constraints {
-		if andCheck(v, c) {
+		if andConstraintsCheck(v, c) {
 			return true
 		}
 	}
 	return false
 }
 
-func andCheck(v Version, constraints []constraint) bool {
+func andConstraintsCheck(v Version, constraints []constraint) bool {
 	for _, c := range constraints {
 		if !c.check(v) {
 			return false
