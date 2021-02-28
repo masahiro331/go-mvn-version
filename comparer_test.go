@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func NewComparerTest(t *testing.T) {
+func TestNewComparer(t *testing.T) {
 	tests := []struct {
 		s       string
 		wantErr bool
@@ -51,9 +51,9 @@ func NewComparerTest(t *testing.T) {
 
 func TestComparerCheck(t *testing.T) {
 	tests := []struct {
-		requirement string
-		version     string
-		want        bool
+		s       string
+		version string
+		want    bool
 	}{
 		{"[,1.0.0]", "0.9", true},
 		{"1.0.0", "1", true},
@@ -76,8 +76,8 @@ func TestComparerCheck(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%s %s", tt.version, tt.requirement), func(t *testing.T) {
-			r, err := NewComparer(tt.requirement)
+		t.Run(fmt.Sprintf("%s %s", tt.version, tt.s), func(t *testing.T) {
+			r, err := NewComparer(tt.s)
 			require.NoError(t, err)
 
 			v, err := NewVersion(tt.version)

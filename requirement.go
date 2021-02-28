@@ -10,7 +10,7 @@ import (
 var requirementRegexp *regexp.Regexp
 
 const (
-	MINVersion       = "-1"
+	MINVersion       = "-----1"
 	MAXVersion       = "99999999999999999999"
 	requirementRegex = `(` +
 		`[\[\(]` +
@@ -67,10 +67,12 @@ func NewRequirements(v string) (Requirements, error) {
 			continue
 		}
 
+		// "[,1.0.0]" => []string{"[MIN", "1.0.0]"}
 		if len(ss[0]) == 1 {
 			ss[0] = ss[0] + MINVersion
 		}
 
+		// "[,1.0.0]" => []string{"[1.0.0", "MAX]"}
 		if len(ss[1]) == 1 {
 			ss[1] = MAXVersion + ss[1]
 		}
@@ -84,6 +86,7 @@ func NewRequirements(v string) (Requirements, error) {
 		}
 		rss = append(rss, rs)
 	}
+
 	return Requirements{
 		requirements: rss,
 	}, nil
@@ -148,6 +151,10 @@ func trimSpaces(s string) string {
 	return strings.Join(strings.Fields(s), "")
 }
 
+// checkEqualOperator check equal operation.
+// e.g.
+// "[1.0.0]" => "== 1.0.0"
+// "(1.0.0)" => "== 1.0.0"
 func checkEqualOperator(r string) bool {
 	if (strings.HasPrefix(r, "[") || strings.HasPrefix(r, "(")) &&
 		(strings.HasSuffix(r, "]") || strings.HasSuffix(r, ")")) {
