@@ -41,7 +41,7 @@ type requirement struct {
 
 // NewRequirements is return Requirement
 // [1.0.0], [1.0.1]	=> []requirement{"[1.0.0]","[1.0.1]"}
-// [1.0.0]			=> []requirement{"[1.0.0]"}
+// [1.0.0]		=> []requirement{"[1.0.0]"}
 func NewRequirements(v string) (Requirements, error) {
 	// trimSpace "[ , 1.0.0]" => "[,1.0.0]"
 	v = trimSpaces(v)
@@ -58,10 +58,10 @@ func NewRequirements(v string) (Requirements, error) {
 	}
 
 	// Normalization
-	// "(,1.0.0)"				=> "(MIN, 1.0.0)"
-	// "(1.0.0,)"				=> "[1.0.0, MAX)"
-	// "[1.0.0]"				=> "[1.0.0, 1.0.0]"
-	// "(1.0.0]"				=> "[1.0.0, 1.0.0]"
+	// "(,1.0.0)"			=> "(MIN, 1.0.0)"
+	// "(1.0.0,)"			=> "[1.0.0, MAX)"
+	// "[1.0.0]"			=> "[1.0.0, 1.0.0]"
+	// "(1.0.0]"			=> "[1.0.0, 1.0.0]"
 	// "[,1.0.0],[1.0.0,1.1]"	=> "[,1.0.0]", "[1.0.0,1.1]"
 	requirements := requirementRegexp.FindAllString(v, -1)
 	if len(requirements) == 0 {
