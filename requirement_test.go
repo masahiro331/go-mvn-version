@@ -14,7 +14,7 @@ func TestNewRequirements(t *testing.T) {
 		wantErr     bool
 	}{
 		// if soft requirement for 1.0. Use constraints compare
-		{"1.0", true},
+		{"1.0", false},
 
 		{"(, 1.0)", false},
 		{"(,1.0)", false},
@@ -141,6 +141,11 @@ func TestRequirementsCheck(t *testing.T) {
 		{"(,1.0.5.RELEASE],[2.0.0.RELEASE,2.0.16.RELEASE),[2.1.0.RELEASE,2.1.3.RELEASE)", "1.0.0", true},
 		{"(,1.0.5.RELEASE],[2.0.0.RELEASE,2.0.16.RELEASE),[2.1.0.RELEASE,2.1.3.RELEASE)", "2.0.0", true},
 		{"(,1.0.5.RELEASE],[2.0.0.RELEASE,2.0.16.RELEASE),[2.1.0.RELEASE,2.1.3.RELEASE)", "2.1.3", false},
+
+		// soft requirement
+		{"1.0", "2.0", true},
+		{"1.0", "1.0", true},
+		{"1.0", "0.1", true},
 	}
 
 	for _, tt := range tests {

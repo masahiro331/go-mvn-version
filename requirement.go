@@ -7,7 +7,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var requirementRegexp *regexp.Regexp
+var (
+	requirementRegexp     *regexp.Regexp
+	softRequirementRegexp *regexp.Regexp
+)
 
 const (
 	MINVersion       = "-----1"
@@ -17,10 +20,13 @@ const (
 		`[0-9A-Za-z\-\.,]+` +
 		`[\]\)]` +
 		`)`
+
+	softRequirementRegex = `^[0-9A-Za-z\-~\.]+$`
 )
 
 func init() {
 	requirementRegexp = regexp.MustCompile(requirementRegex)
+	softRequirementRegexp = regexp.MustCompile(softRequirementRegex)
 }
 
 type Requirements struct {
@@ -37,9 +43,19 @@ type requirement struct {
 // [1.0.0], [1.0.1]	=> []requirement{"[1.0.0]","[1.0.1]"}
 // [1.0.0]			=> []requirement{"[1.0.0]"}
 func NewRequirements(v string) (Requirements, error) {
-	var rss [][]requirement
 	// trimSpace "[ , 1.0.0]" => "[,1.0.0]"
 	v = trimSpaces(v)
+
+	var rss [][]requirement
+	if softRequirementRegexp.MatchString(v) {
+		r, err := newRequirement(v)
+		if err != nil {
+			return Requirements{}, xerrors.Errorf("improper soft requirements: %v", v)
+		}
+		return Requirements{
+			requirements: append(rss, []requirement{r}),
+		}, nil
+	}
 
 	// Normalization
 	// "(,1.0.0)"				=> "(MIN, 1.0.0)"
@@ -112,8 +128,9 @@ func newRequirement(r string) (requirement, error) {
 	case strings.HasSuffix(r, ")"):
 		v, err = NewVersion(strings.TrimSuffix(r, ")"))
 		operator = requirementLessThan
-	default:
-		return requirement{}, xerrors.New("parser new requirement error")
+	default: // soft requirement
+		v, err = NewVersion(r)
+		operator = requirementSoftRequirement
 	}
 	if err != nil {
 		return requirement{}, xerrors.Errorf("failed to new version: %w", err)
@@ -166,6 +183,11 @@ func checkEqualOperator(r string) bool {
 //-------------------------------------------------------------------
 // Requirement functions
 //-------------------------------------------------------------------
+
+// soft requirement always return true
+func requirementSoftRequirement(v, c Version) bool {
+	return true
+}
 
 func requirementEqual(v, c Version) bool {
 	return v.Equal(c)
