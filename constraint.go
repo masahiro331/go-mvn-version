@@ -26,7 +26,7 @@ var (
 )
 
 const (
-	regex = `([0-9A-Za-z\-~\.]+)`
+	constraintRegex = `([0-9A-Za-z\-~\.]+)`
 )
 
 func init() {
@@ -38,12 +38,12 @@ func init() {
 	constraintRegexp = regexp.MustCompile(fmt.Sprintf(
 		`(%s)\s*(%s)`,
 		strings.Join(ops, "|"),
-		regex))
+		constraintRegex))
 
 	validConstraintRegexp = regexp.MustCompile(fmt.Sprintf(
 		`^\s*(\s*(%s)\s*(%s)\s*\,?)*\s*$`,
 		strings.Join(ops, "|"),
-		regex))
+		constraintRegex))
 }
 
 type operatorFunc func(v, c Version) bool
@@ -105,14 +105,14 @@ func newConstraint(c string) (constraint, error) {
 
 func (cs Constraints) Check(v Version) bool {
 	for _, c := range cs.constraints {
-		if andCheck(v, c) {
+		if andConstraintsCheck(v, c) {
 			return true
 		}
 	}
 	return false
 }
 
-func andCheck(v Version, constraints []constraint) bool {
+func andConstraintsCheck(v Version, constraints []constraint) bool {
 	for _, c := range constraints {
 		if !c.check(v) {
 			return false
