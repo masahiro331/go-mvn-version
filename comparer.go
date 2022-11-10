@@ -1,8 +1,9 @@
 package version
 
 import (
-	multierror "github.com/hashicorp/go-multierror"
-	"golang.org/x/xerrors"
+	"fmt"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 type Comparer interface {
@@ -24,5 +25,5 @@ func NewComparer(v string) (Comparer, error) {
 	}
 	errs = multierror.Append(errs, err)
 
-	return nil, xerrors.Errorf("failed to new comparer: %w", errs)
+	return nil, fmt.Errorf("failed to new comparer: %w", errs)
 }

@@ -3,7 +3,7 @@ package version_test
 import (
 	"testing"
 
-	version "github.com/masahiro331/go-mvn-version"
+	"github.com/masahiro331/go-mvn-version"
 )
 
 func TestEqual(t *testing.T) {

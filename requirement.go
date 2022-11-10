@@ -1,10 +1,9 @@
 package version
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
-
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -50,7 +49,7 @@ func NewRequirements(v string) (Requirements, error) {
 	if softRequirementRegexp.MatchString(v) {
 		r, err := newRequirement(v)
 		if err != nil {
-			return Requirements{}, xerrors.Errorf("improper soft requirements: %v", v)
+			return Requirements{}, fmt.Errorf("improper soft requirements: %v", v)
 		}
 		return Requirements{
 			requirements: append(rss, []requirement{r}),
@@ -65,19 +64,19 @@ func NewRequirements(v string) (Requirements, error) {
 	// "[,1.0.0],[1.0.0,1.1]"	=> "[,1.0.0]", "[1.0.0,1.1]"
 	requirements := requirementRegexp.FindAllString(v, -1)
 	if len(requirements) == 0 {
-		return Requirements{}, xerrors.Errorf("improper requirements: %v", requirements)
+		return Requirements{}, fmt.Errorf("improper requirements: %v", requirements)
 	}
 
 	for _, r := range requirements {
 		var rs []requirement
 		ss := strings.Split(r, ",")
 		if len(ss) > 2 {
-			return Requirements{}, xerrors.Errorf("improper requirement length: %v", r)
+			return Requirements{}, fmt.Errorf("improper requirement length: %v", r)
 		}
 		if len(ss) == 1 && checkEqualOperator(ss[0]) {
 			nr, err := newRequirement(ss[0])
 			if err != nil {
-				return Requirements{}, xerrors.Errorf("failed to parse requirement: %w", err)
+				return Requirements{}, fmt.Errorf("failed to parse requirement: %w", err)
 			}
 			rss = append(rss, append(rs, nr))
 			continue
@@ -96,7 +95,7 @@ func NewRequirements(v string) (Requirements, error) {
 		for _, single := range ss {
 			nr, err := newRequirement(single)
 			if err != nil {
-				return Requirements{}, xerrors.Errorf("failed to parse requirement: %w", err)
+				return Requirements{}, fmt.Errorf("failed to parse requirement: %w", err)
 			}
 			rs = append(rs, nr)
 		}
@@ -133,7 +132,7 @@ func newRequirement(r string) (requirement, error) {
 		operator = requirementSoftRequirement
 	}
 	if err != nil {
-		return requirement{}, xerrors.Errorf("failed to new version: %w", err)
+		return requirement{}, fmt.Errorf("failed to new version: %w", err)
 	}
 	return requirement{
 		version:  v,
