@@ -1,6 +1,6 @@
 module github.com/masahiro331/go-mvn-version
 
-go 1.21.3
+go 1.23
 
 require (
 	github.com/hashicorp/go-multierror v1.1.1
