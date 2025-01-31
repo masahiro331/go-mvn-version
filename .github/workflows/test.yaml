@@ -14,9 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v6.2.0
-          args: --deadline=30m
+        uses: golangci/golangci-lint-action@v6.2.0
       - name: Run unit tests
         run: go test ./...
