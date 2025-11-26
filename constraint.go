@@ -26,7 +26,7 @@ var (
 )
 
 const (
-	constraintRegex = `([0-9A-Za-z\-~_\.]+)`
+	constraintRegex = `([0-9A-Za-z\-~_\.\+]+)`
 )
 
 func init() {

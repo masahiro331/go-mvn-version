@@ -22,6 +22,7 @@ func TestNewConstraints(t *testing.T) {
 		{">40.50.60, < 50.70", false},
 		{"2.0", false},
 		{"2.3.5-20161202202307-sha.e8fc5e5", false},
+		{"2.3.5+build.1", false},
 		{">= bar", false},
 		{">= 1.1.1.v1", false},
 		{">= 1.1.1.1v", false},
@@ -100,8 +101,10 @@ func TestVersion_Check(t *testing.T) {
 		{"<1.1", "0.1.0", true},
 		{"<1.1", "1.1.0", false},
 		{"<1.1", "1.1.1", false},
-		{"<1_1", "1", true},                                         // https://github.com/masahiro331/go-mvn-version/pull/11
-		{"<1087.1089.v2f1b_9a_b_040e4", "1087.v16065d268466", true}, // https://github.com/masahiro331/go-mvn-version/pull/11
+		{"<1_1", "1", true}, // https://github.com/masahiro331/go-mvn-version/pull/11
+		{
+			"<1087.1089.v2f1b_9a_b_040e4", "1087.v16065d268466", true,
+		}, // https://github.com/masahiro331/go-mvn-version/pull/11
 
 		// Less than or equal
 		{"<=0.2.3", "1.2.3", false},
