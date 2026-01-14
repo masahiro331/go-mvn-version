@@ -105,6 +105,10 @@ func TestVersion_Check(t *testing.T) {
 		{
 			"<1087.1089.v2f1b_9a_b_040e4", "1087.v16065d268466", true,
 		}, // https://github.com/masahiro331/go-mvn-version/pull/11
+		{"<0.0.5+sp555", "0.1.0", false},
+		{"<0.0.5+sp555", "0.0.5", true},
+		{"<0.0.5+sp555", "0.0.5+sp1", true},
+		{"<0.0.5+sp555", "0.0.5+sp999", false},
 
 		// Less than or equal
 		{"<=0.2.3", "1.2.3", false},
@@ -141,6 +145,10 @@ func TestVersion_Check(t *testing.T) {
 		{">11.1", "11.1.0", false},
 		{">11.1", "11.1.1", true}, // different
 		{">11.1", "11.2.1", true},
+		{">0.0.5+sp555", "0.1.0", true},
+		{">0.0.5+sp555", "0.0.5", false},
+		{">0.0.5+sp555", "0.0.5+sp1", false},
+		{">0.0.5+sp555", "0.0.5+sp999", true},
 
 		// Greater than or equal
 		{">=11.1.3", "11.1.2", false},
@@ -165,6 +173,8 @@ func TestVersion_Check(t *testing.T) {
 		{">=1.1", "1.1.0", true},
 		{">=1.1", "0.0.9", false},
 		{">=0", "0.0.0", true},
+		{">=0.0.5+sp555", "0.0.5", false},
+		{">=0.0.5+sp555", "0.0.5+sp1", false},
 
 		// More than 3 numbers
 		{"< 1.0.0.1 || = 2.0.1.2.3", "2.0", false},
