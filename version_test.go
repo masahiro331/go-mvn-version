@@ -18,6 +18,16 @@ func TestEqual(t *testing.T) {
 			expect: true,
 		},
 		{
+			v1:     "1-foo",
+			v2:     "1.foo",
+			expect: true,
+		},
+		{
+			v1:     "1-1-foo",
+			v2:     "1-1.foo",
+			expect: true,
+		},
+		{
 			v1:     "1--1",
 			v2:     "1-1",
 			expect: false,
@@ -246,11 +256,6 @@ func TestGreaterThan(t *testing.T) {
 			expect: true,
 		},
 		{
-			v1:     "1-foo",
-			v2:     "1.foo",
-			expect: true,
-		},
-		{
 			v1:     "1-1",
 			v2:     "1-foo",
 			expect: true,
@@ -258,11 +263,6 @@ func TestGreaterThan(t *testing.T) {
 		{
 			v1:     "1.1",
 			v2:     "1-1",
-			expect: true,
-		},
-		{
-			v1:     "1-1-foo",
-			v2:     "1-1.foo",
 			expect: true,
 		},
 		{
@@ -433,8 +433,8 @@ func TestVersionQualifier(t *testing.T) {
 func TestVersionsNumber(t *testing.T) {
 	versionsNumber := []string{
 		"2.0",
-		"2-1",
 		"2.0.a",
+		"2-1",
 		// "2.0.0.a", ref.https://issues.apache.org/jira/browse/MNG-6420
 		"2.0.2",
 		"2.0.123",
@@ -474,6 +474,42 @@ func TestVersionsNumber(t *testing.T) {
 			if !high.GreaterThan(low) {
 				t.Errorf("expected: %s > %s \n", high, low)
 			}
+		}
+	}
+}
+
+// MNG-7644: 1.0.0.X1 < 1.0.0-X2, and 2.0.X == 2-X == 2.0.0.X for any string X
+func TestMng7644(t *testing.T) {
+	for _, x := range []string{"abc", "alpha", "a", "beta", "b", "def", "milestone", "m", "RC"} {
+		low, _ := version.NewVersion("1.0.0." + x + "1")
+		high, _ := version.NewVersion("1.0.0-" + x + "2")
+		if !low.LessThan(high) || !high.GreaterThan(low) {
+			t.Errorf("expected: %s < %s", low, high)
+		}
+		for _, pair := range [][2]string{{"2-" + x, "2.0." + x}, {"2-" + x, "2.0.0." + x}, {"2.0." + x, "2.0.0." + x}} {
+			v1, _ := version.NewVersion(pair[0])
+			v2, _ := version.NewVersion(pair[1])
+			if !v1.Equal(v2) {
+				t.Errorf("expected: %s == %s", v1, v2)
+			}
+		}
+	}
+}
+
+// An empty sub list such as the one after "1.0-final" must be dropped, as Maven does
+func TestTrailingEmptyListIsNormalized(t *testing.T) {
+	testCases := []struct {
+		low, high string
+	}{
+		{low: "1.0-final", high: "1.0.sp-1"},
+		{low: "1-ga", high: "1.foo-1"},
+		{low: "1.0-release", high: "1.0.0.sp-1"},
+	}
+	for _, tc := range testCases {
+		low, _ := version.NewVersion(tc.low)
+		high, _ := version.NewVersion(tc.high)
+		if !low.LessThan(high) || !high.GreaterThan(low) {
+			t.Errorf("expected: %s < %s", tc.low, tc.high)
 		}
 	}
 }

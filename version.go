@@ -256,6 +256,11 @@ func parseVersion(v string) ListItem {
 
 		} else if _, err := strconv.Atoi(c); err == nil {
 			if !isDigit && i > startIndex {
+				// 1.0.0.X1 < 1.0.0-X2: treat .X as -X for any string qualifier X
+				if len(list) > 0 {
+					stack.Push(list)
+					list = ListItem{}
+				}
 				list = append(list, newStringItem(str[startIndex:i], true))
 				startIndex = i
 
@@ -276,6 +281,11 @@ func parseVersion(v string) ListItem {
 		}
 	}
 	if len(v) > startIndex {
+		// 1.0.0.X1 < 1.0.0-X2: treat a trailing .X as -X for any string qualifier X, MNG-7644
+		if !isDigit && len(list) > 0 {
+			stack.Push(list)
+			list = ListItem{}
+		}
 		list = append(list, parseItem(isDigit, str[startIndex:]))
 		stack.Push(list)
 	}
@@ -286,7 +296,8 @@ func parseVersion(v string) ListItem {
 
 	ret := stack.Pop().normalize()
 	for !stack.IsEmpty() {
-		ret = append(stack.Pop().normalize(), ret)
+		// Normalize again after adding the sub list, so an empty one (as in 1.0-final) is removed, like Maven
+		ret = append(stack.Pop().normalize(), ret).normalize()
 	}
 	return ret
 }
